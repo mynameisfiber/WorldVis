@@ -16,8 +16,8 @@
 #define JSON_FREE(json_obj) (json_object_put(json_obj))
 
 //////////// PARAMETERS ////////////////
-static int MIN_KEYWORD_COUNT   = 5;
-static double KW_R             = 175;
+static int MIN_KEYWORD_COUNT   = 3;
+static int MIN_KEYWORD_LENGTH  = 6;
 static double KW_DTHETA        = M_PI/16 * sqrt(2);
 static const double MIN_ALPHA  = 1e-6;
 ////////////////////////////////////////
@@ -51,6 +51,17 @@ struct json_object *parse_json(std::string json_str)
     return json_tokener_parse(json_str.c_str());
 }
 
+double KW_R(double theta, double a=100.0, double b=113.315157801435)
+{
+    double s, c;
+    s = sin(theta);
+    c = cos(theta);
+
+    double a2=a*a;
+    double b2=b*b;
+
+    return a2+b2-(b2*c*c)/a2-(a2*s*s)/b2;
+}
 
 void ReadInput()
 {
@@ -78,7 +89,7 @@ void ReadInput()
                 clicks.push_back(newclick);
 
                 Explosion newexp;
-                newexp.x      = {x,y};
+                newexp.x      = {x+15.0 ,y};
                 newexp.r      = 0.0;
                 newexp.dr     = 0.05;
                 newexp.alpha  = 0.7;
@@ -86,40 +97,43 @@ void ReadInput()
                 explosions.push_back(newexp);
 
                 std::string cur_kw = JSON_GET_STR(decode, "e");
-                if (keywords.find(cur_kw) != keywords.end()) {
-                    double s, c;
-                    sincos(keywords[cur_kw].theta, &s, &c);
+                if (cur_kw.length() > MIN_KEYWORD_LENGTH || cur_kw.find_first_of(" ") != std::string::npos) {
+                    if (keywords.find(cur_kw) != keywords.end()) {
+                        double s, c;
+                        sincos(keywords[cur_kw].theta, &s, &c);
 
-                    keywords[cur_kw].count ++;
-                    if (keywords[cur_kw].count > MAX_COUNT)
-                        MAX_COUNT = keywords[cur_kw].count;
-                    keywords[cur_kw].alpha = 1.0;
-                    keywords[cur_kw].x     = { s * KW_R, 
-                                               c * KW_R };
-                } else {
-                    double s, c;
-                    sincos(KW_THETA, &s, &c);
+                        keywords[cur_kw].count ++;
+                        if (keywords[cur_kw].count > MAX_COUNT)
+                            MAX_COUNT = keywords[cur_kw].count;
+                        keywords[cur_kw].alpha = 1.0;
+                        double R = KW_R(keywords[cur_kw].theta);
+                        keywords[cur_kw].x     = { s * R, 
+                                                   c * R };
+                    } else {
+                        double s, c;
+                        sincos(KW_THETA, &s, &c);
 
-                    Keyword keywd;
-                    keywd.kw     = cur_kw;
-                    keywd.x      = { s * KW_R, c * KW_R };
-                    keywd.theta  = KW_THETA;
-                    keywd.alpha  = 1.0;
-                    keywd.dalpha = 2.5e-3;
-                    keywd.count  = 1;
-                    keywords[cur_kw] = keywd;
+                        double R = KW_R(KW_THETA);
+                        Keyword keywd;
+                        keywd.kw     = cur_kw;
+                        keywd.theta  = KW_THETA;
+                        keywd.x      = { s * R, c * R };
+                        keywd.alpha  = 1.0;
+                        keywd.dalpha = 2.5e-3;
+                        keywd.count  = 1;
+                        keywords[cur_kw] = keywd;
 
-                    KW_THETA += KW_DTHETA;
+                        KW_THETA += KW_DTHETA;
+                    }
+                    keywords[cur_kw].dr = 0.0;
+
+                    Link li;
+                    li.click  = &clicks.back();
+                    li.kw     = &keywords[cur_kw];
+                    li.alpha  = 0.25;
+                    li.dalpha = 0.01;
+                    links.push_back(li);
                 }
-                keywords[cur_kw].dr = fmin( 0.5 * MAX_COUNT / keywords[cur_kw].count,
-                                           10.0 );
-
-                Link li;
-                li.click  = &clicks.back();
-                li.kw     = &keywords[cur_kw];
-                li.alpha  = 0.25;
-                li.dalpha = 0.01;
-                links.push_back(li);
             }
         }
         JSON_FREE(decode);
@@ -259,6 +273,16 @@ static void DrawGLScene()
     glRotatef(xRotate, 1, 0, 0);
     glRotatef(yRotate, 0, 1, 0);
 
+    glBegin(GL_LINE_LOOP);
+    glColor4f(1.0, 1.0, 1.0, 1.0);
+    for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
+    {
+        double s, c;
+        sincos(theta, &s, &c);
+        glVertex3f(s * KW_R(theta), c * KW_R(theta), 0.0);
+    }
+    glEnd();
+
     // First we draw the clicks
     for( auto click = clicks.begin(); !clicks.empty() && click != clicks.end(); click++)
     {
@@ -295,6 +319,8 @@ static void DrawGLScene()
         } else {
             if (kw->count >= MIN_KEYWORD_COUNT)
                 DrawText( kw->kw, kw->x, kw->theta, kw->alpha );
+
+            kw->dr = fmin( 2.0*log( MAX_COUNT / kw->count), 5.0 );
 
             double s, c;
             sincos(kw->theta, &s, &c);
