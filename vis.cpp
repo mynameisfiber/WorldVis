@@ -78,11 +78,11 @@ void ReadInput()
             if (ll_str != NULL) {
                 double x, y;
                 sscanf(ll_str, "[ %lf, %lf ]", &y, &x);
-		x += 15;
+                x += 15;
 
                 Click newclick;
                 newclick.x[0]   = x;
-		newclick.x[1]   = y;
+                newclick.x[1]   = y;
                 newclick.alpha  = 1.0;
                 newclick.dalpha = 2.5e-4;
                 clicks.push_back(newclick);
@@ -163,12 +163,12 @@ static int mouseButtons   = 0;
 static int mouseOldX;
 static int mouseOldY;
 
-static float xTranslate = 0.0;
-static float yTranslate = 0.0;
+static float xTranslate = 0.45;
+static float yTranslate = 0.05;
 static float zTranslate = 4.5;
 static float xRotate = 0.0;
 static float yRotate = 0.0;
-static float currentScale = 0.01;
+static float currentScale = 0.016;
 
 
 void InitGraphics(int argc, char **argv)
@@ -241,10 +241,10 @@ static void DrawTorus(double x[2], double r, double alpha=1)
 
 void DrawString(std::string str)
 {
-	for(int i=0; i<str.size(); i++)
-	{
-		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, str[i]);
-	}
+    for(int i=0; i<str.size(); i++)
+    {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, str[i]);
+    }
 }
 
 static void DrawText(std::string kw, double x[2], double theta, double alpha=1)
@@ -307,7 +307,7 @@ static void DrawGLScene()
         } else {
             DrawPoint( click->x, click->alpha );
             click->alpha -= click->dalpha;
-	    click->alpha = fmax(click->alpha, 0.2);
+            click->alpha = fmax(click->alpha, 0.2);
         }
     }
 
@@ -337,8 +337,8 @@ static void DrawGLScene()
                 DrawText( kw->kw, kw->x, kw->theta, kw->alpha );
 
             //kw->dr = fmin( 1.0*log( MAX_COUNT / kw->count), 5.0 );
-	    double max_r = 0.025, min_r = 0.02;
-	    kw->dr = max_r - (max_r - min_r) * kw->count / MAX_COUNT;
+            double max_r = 0.025, min_r = 0.02;
+            kw->dr = max_r - (max_r - min_r) * kw->count / MAX_COUNT;
 
             double s, c;
             s = sin(kw->theta);
@@ -398,6 +398,8 @@ void SpecialKeyPressed(int key, int x, int y)
         yTranslate -= 5e-2;
     }
 
+    printf("Current Pos: (%f, %f)\n", xTranslate, yTranslate);
+
     glutPostRedisplay();
 }
 
@@ -443,10 +445,12 @@ void KeyPressed(unsigned char key, int x, int y)
 
         case '+':
             currentScale += 5e-4;
+            printf("Current Scale: %f\n",currentScale);
             break;
 
         case '-':
             currentScale = fabs(currentScale - 5e-4);
+            printf("Current Scale: %f\n",currentScale);
             break;
 
         case ',':
