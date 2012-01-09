@@ -16,7 +16,7 @@
 #define JSON_FREE(json_obj) (json_object_put(json_obj))
 
 //////////// PARAMETERS ////////////////
-static int MIN_KEYWORD_COUNT   = 3;
+static int MIN_KEYWORD_COUNT   = 0;
 static int MIN_KEYWORD_LENGTH  = 6;
 static double KW_DTHETA        = M_PI/16 * sqrt(2);
 static const double MIN_ALPHA  = 1e-6;
@@ -51,16 +51,13 @@ struct json_object *parse_json(std::string json_str)
     return json_tokener_parse(json_str.c_str());
 }
 
-double KW_R(double theta, double a=100.0, double b=113.315157801435)
+double KW_R(double theta, double a=50.0, double b=125.0)
 {
     double s, c;
     s = sin(theta);
     c = cos(theta);
 
-    double a2=a*a;
-    double b2=b*b;
-
-    return a2+b2-(b2*c*c)/a2-(a2*s*s)/b2;
+    return 1.15* a*b / sqrt(b*b*c*c + a*a*s*s);
 }
 
 void ReadInput()
@@ -81,15 +78,18 @@ void ReadInput()
             if (ll_str != NULL) {
                 double x, y;
                 sscanf(ll_str, "[ %lf, %lf ]", &y, &x);
+		x += 15;
 
                 Click newclick;
-                newclick.x      = {x, y};
+                newclick.x[0]   = x;
+		newclick.x[1]   = y;
                 newclick.alpha  = 1.0;
                 newclick.dalpha = 2.5e-4;
                 clicks.push_back(newclick);
 
                 Explosion newexp;
-                newexp.x      = {x+15.0 ,y};
+                newexp.x[0]      = x;
+                newexp.x[1]      = y;
                 newexp.r      = 0.0;
                 newexp.dr     = 0.05;
                 newexp.alpha  = 0.7;
@@ -108,8 +108,8 @@ void ReadInput()
                             MAX_COUNT = keywords[cur_kw].count;
                         keywords[cur_kw].alpha = 1.0;
                         double R = KW_R(keywords[cur_kw].theta);
-                        keywords[cur_kw].x     = { s * R, 
-                                                   c * R };
+                        keywords[cur_kw].x[0]     = s * R;
+                        keywords[cur_kw].x[1]     = c * R;
                     } else {
                         double s, c;
                         s = sin(KW_THETA);
@@ -119,15 +119,16 @@ void ReadInput()
                         Keyword keywd;
                         keywd.kw     = cur_kw;
                         keywd.theta  = KW_THETA;
-                        keywd.x      = { s * R, c * R };
+                        keywd.x[0]      = s * R;
+                        keywd.x[1]      = c * R;
                         keywd.alpha  = 1.0;
-                        keywd.dalpha = 2.5e-3;
+                        keywd.dalpha = 1e-3;
                         keywd.count  = 1;
                         keywords[cur_kw] = keywd;
 
                         KW_THETA += KW_DTHETA;
                     }
-                    keywords[cur_kw].dr = 0.0;
+                    //keywords[cur_kw].dr = 0.0;
 
                     Link li;
                     li.click  = &clicks.back();
@@ -238,11 +239,19 @@ static void DrawTorus(double x[2], double r, double alpha=1)
     glEnd();
 }
 
+void DrawString(std::string str)
+{
+	for(int i=0; i<str.size(); i++)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, str[i]);
+	}
+}
+
 static void DrawText(std::string kw, double x[2], double theta, double alpha=1)
 {
     glColor4f(1.0, 1.0, 1.0, alpha);
     glRasterPos3f(x[0], x[1], 0.0);
-    glutBitmapString(GLUT_BITMAP_HELVETICA_12, (const unsigned char*) kw.c_str());
+    DrawString(kw);
 
 }
 
@@ -258,7 +267,7 @@ static void DrawLine(double x0[2], double x1[2], double alpha=1)
 
 static void DrawPoint(double x[2], double alpha=1)
 {
-    DrawCircle(x, .35, alpha );
+    DrawCircle(x, .15, alpha );
     //glBegin(GL_POINT);
     //glColor4f(1.0, 1.0, 1.0, alpha);
     //glVertex2f(x[0], x[1]);
@@ -277,16 +286,17 @@ static void DrawGLScene()
     glRotatef(xRotate, 1, 0, 0);
     glRotatef(yRotate, 0, 1, 0);
 
-    glBegin(GL_LINE_LOOP);
-    glColor4f(1.0, 1.0, 1.0, 1.0);
-    for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
-    {
-        double s, c;
-        s = sin(theta);
-        c = cos(theta);
-        glVertex3f(s * KW_R(theta), c * KW_R(theta), 0.0);
-    }
-    glEnd();
+    //glBegin(GL_LINE_LOOP);
+    //glColor4f(1.0, 1.0, 1.0, 1.0);
+    //for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
+    //{
+    //    double s, c;
+    //    double r = KW_R(theta);
+    //    s = sin(theta);
+    //    c = cos(theta);
+    //    glVertex3f(s * r, c * r, 0.0);
+    //}
+    //glEnd();
 
     // First we draw the clicks
     for( auto click = clicks.begin(); !clicks.empty() && click != clicks.end(); click++)
@@ -297,6 +307,7 @@ static void DrawGLScene()
         } else {
             DrawPoint( click->x, click->alpha );
             click->alpha -= click->dalpha;
+	    click->alpha = fmax(click->alpha, 0.2);
         }
     }
 
@@ -325,7 +336,9 @@ static void DrawGLScene()
             if (kw->count >= MIN_KEYWORD_COUNT)
                 DrawText( kw->kw, kw->x, kw->theta, kw->alpha );
 
-            kw->dr = fmin( 2.0*log( MAX_COUNT / kw->count), 5.0 );
+            //kw->dr = fmin( 1.0*log( MAX_COUNT / kw->count), 5.0 );
+	    double max_r = 0.025, min_r = 0.02;
+	    kw->dr = max_r - (max_r - min_r) * kw->count / MAX_COUNT;
 
             double s, c;
             s = sin(kw->theta);
