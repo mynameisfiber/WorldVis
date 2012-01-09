@@ -6,7 +6,7 @@
 #include <map>
 
 #include <GL/gl.h>
-#include <GL/freeglut.h>
+#include <GL/glut.h>
 
 #include "elements.h"
 
@@ -100,7 +100,8 @@ void ReadInput()
                 if (cur_kw.length() > MIN_KEYWORD_LENGTH || cur_kw.find_first_of(" ") != std::string::npos) {
                     if (keywords.find(cur_kw) != keywords.end()) {
                         double s, c;
-                        sincos(keywords[cur_kw].theta, &s, &c);
+                        s = sin(keywords[cur_kw].theta);
+                        c = cos(keywords[cur_kw].theta);
 
                         keywords[cur_kw].count ++;
                         if (keywords[cur_kw].count > MAX_COUNT)
@@ -111,7 +112,8 @@ void ReadInput()
                                                    c * R };
                     } else {
                         double s, c;
-                        sincos(KW_THETA, &s, &c);
+                        s = sin(KW_THETA);
+                        c = cos(KW_THETA);
 
                         double R = KW_R(KW_THETA);
                         Keyword keywd;
@@ -215,7 +217,8 @@ static void DrawCircle(double x[2], double r, double alpha=1)
     for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
     {
         double s, c;
-        sincos(theta, &s, &c);
+        s = sin(theta);
+        c = cos(theta);
         glVertex3f(x[0] + s * r, x[1] + c * r, 0.0);
     }
     glEnd();
@@ -228,7 +231,8 @@ static void DrawTorus(double x[2], double r, double alpha=1)
     for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
     {
         double s, c;
-        sincos(theta, &s, &c);
+        s = sin(theta);
+        c = cos(theta);
         glVertex3f(x[0] + s * r, x[1] + c * r, 0.0);
     }
     glEnd();
@@ -278,7 +282,8 @@ static void DrawGLScene()
     for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
     {
         double s, c;
-        sincos(theta, &s, &c);
+        s = sin(theta);
+        c = cos(theta);
         glVertex3f(s * KW_R(theta), c * KW_R(theta), 0.0);
     }
     glEnd();
@@ -323,7 +328,8 @@ static void DrawGLScene()
             kw->dr = fmin( 2.0*log( MAX_COUNT / kw->count), 5.0 );
 
             double s, c;
-            sincos(kw->theta, &s, &c);
+            s = sin(kw->theta);
+            c = cos(kw->theta);
             kw->x[0] += kw->dr * s * MAX_COUNT / kw->count;
             kw->x[1] += kw->dr * c * MAX_COUNT / kw->count;
 
