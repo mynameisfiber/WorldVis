@@ -84,7 +84,7 @@ void ReadInput()
                 newclick.x[0]   = x;
                 newclick.x[1]   = y;
                 newclick.alpha  = 1.0;
-                newclick.dalpha = 2.5e-4;
+                newclick.dalpha = 1e-6;
                 clicks.push_back(newclick);
 
                 Explosion newexp;
@@ -215,7 +215,7 @@ static void DrawCircle(double x[2], double r, double alpha=1)
     glBegin(GL_TRIANGLE_FAN);
     glColor4f(1.0, 1.0, 1.0, alpha);
     glVertex3f(x[0], x[1], 0.0);
-    for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
+    for(double theta=0; theta<=2*M_PI; theta+=M_PI/16.)
     {
         double s, c;
         s = sin(theta);
@@ -229,7 +229,7 @@ static void DrawTorus(double x[2], double r, double alpha=1)
 {
     glBegin(GL_LINE_LOOP);
     glColor4f(1.0, 1.0, 1.0, alpha);
-    for(double theta=0; theta<=2*M_PI; theta+=M_PI/24.)
+    for(double theta=0; theta<=2*M_PI; theta+=M_PI/16.)
     {
         double s, c;
         s = sin(theta);
@@ -307,7 +307,6 @@ static void DrawGLScene()
         } else {
             DrawPoint( click->x, click->alpha );
             click->alpha -= click->dalpha;
-            click->alpha = fmax(click->alpha, 0.2);
         }
     }
 
@@ -337,8 +336,8 @@ static void DrawGLScene()
                 DrawText( kw->kw, kw->x, kw->theta, kw->alpha );
 
             //kw->dr = fmin( 1.0*log( MAX_COUNT / kw->count), 5.0 );
-            double max_r = 0.025, min_r = 0.02;
-            kw->dr = max_r - (max_r - min_r) * kw->count / MAX_COUNT;
+            double max_dr = 0.0125, min_dr = 0.01;
+            kw->dr = max_dr - (max_dr - min_dr) * kw->count / MAX_COUNT;
 
             double s, c;
             s = sin(kw->theta);
